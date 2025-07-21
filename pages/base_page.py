@@ -1,20 +1,13 @@
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.webdriver import WebDriver
 import allure
-from data.credentials import Credentials
 
 class BasePage:
     """Базовый класс для всех страниц"""
 
     def __init__(self, driver):
-        self.driver: WebDriver = driver
+        self.driver = driver
         self.wait = WebDriverWait(driver, 10)
-        self.credentials = Credentials()
-
-    """Для работы с нашими Url"""
-    def open(self):
-        self.driver.get(self._PAGE_URL)
 
     def find_element(self, locator):
         """Найти элемент с явным ожиданием"""

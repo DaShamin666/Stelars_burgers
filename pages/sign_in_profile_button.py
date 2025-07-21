@@ -1,9 +1,11 @@
-from base.base_page import BasePage
-from data.links import Links
-# Вход через кнопку «Личный кабинет»
+from pages.base_page import BasePage
 
 class SignIn(BasePage):
-    _PAGE_URL = Links.HOST
+    def __init__(self, driver, links):
+        super().__init__(driver)
+        self._links = links
+        self._PAGE_URL = links["HOST"]
+
     _BUTTON_PROFILE = ('xpath',"//p[contains(@class,"
                                " 'AppHeader_header__linkText__3q_va') and contains(@class,"
                                " 'ml-2') and text()='Личный Кабинет']")
@@ -16,17 +18,26 @@ class SignIn(BasePage):
                                          " 'button_button_type_primary__1O7Bx')"
                                          " and contains(@class, 'button_button_size_medium__3zxIa')]")
 
-
     def click_button_on_sign_in_profile(self):
+        """Кликает по кнопке 'Личный кабинет' в хедере."""
         self.click_element(self._BUTTON_PROFILE)
 
-    def input_email_on_sign_in(self,email):
+    def input_email_on_sign_in(self, email):
+        """Вводит email на странице входа."""
         self.input_text(self._INPUT_EMAIL_SIGN_IN, email)
 
-    def input_password_on_sign_in(self,password):
+    def input_password_on_sign_in(self, password):
+        """Вводит пароль на странице входа."""
         self.input_text(self._INPUT_PASSWORD_SIGN_IN, password)
 
     def click_button_on_sign(self):
+        """Кликает по кнопке входа на странице входа и проверяет успешный вход."""
         self.click_element(self._BUTTON_FIELD_SIGN_IN)
+        assert self.driver.current_url == self._links["HOST"], f"Ожидался переход на главную после входа, но URL: {self.driver.current_url}"
+
+    def open(self):
+        """Открывает страницу авторизации."""
+        self.driver.get(self._PAGE_URL)
+        assert self.driver.current_url == self._PAGE_URL, f"Не удалось открыть страницу авторизации: {self.driver.current_url}"
 
 
