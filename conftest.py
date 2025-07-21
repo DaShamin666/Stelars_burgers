@@ -3,44 +3,53 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from config.environments import get_env_config, get_user
-from pages.registration_page import RegistrationPage
-from pages.sign_in_profile_button import SignIn
-from pages.sign_in_button_in_registration import SignInRegistrationPage
-from pages.sign_in_password_recovery import SignInPasswordRecoveryPage
-from pages.sign_in_to_your_account import LogInToYourAccountPage
-from pages.passage import Passage
-from pages.exit_in_profile import ExitInProfile
-from pages.buns_sauces_fillings_passages import BunsSauceFillingsPassagesPage
+from pages.registration import RegistrationPage
+from pages.login_pages.login_via_profile import LoginViaProfilePage
+from pages.login_pages.login_via_registration import LoginViaRegistrationPage
+from pages.login_pages.login_via_password_recovery import LoginViaPasswordRecoveryPage
+from pages.login_pages.login_via_main import LoginViaMainPage
+from pages.navigation import NavigationPage
+from pages.profile_exit import ProfileExitPage
+from pages.ingredients import IngredientsPage
 from data.credentials import Credentials
 
 DEVICE_PRESETS = {
     "mobile": (375, 667),
     "tablet": (768, 1024),
     "laptop": (1024, 768),
-    "desktop": (1280, 800)
+    "desktop": (1280, 800),
 }
+
 
 def pytest_addoption(parser):
     parser.addoption("--browser", default="chrome", help="chrome/firefox")
-    parser.addoption("--headless", action="store_true")
+    parser.addoption(
+        "--headless", action="store_true", help="Run browser in headless mode"
+    )
     parser.addoption("--device", default=None, help="mobile/tablet/laptop/desktop")
     parser.addoption("--env", default="dev", help="dev/stage")
-    parser.addoption("--user-type", default=None)
+    parser.addoption("--user-type", default=None, help="Type of user for testing")
 
-def create_driver(browser: str, headless: bool, width: int, height: int):
+
+def create_driver(browser, headless, width, height):
     if browser == "chrome":
         options = ChromeOptions()
         if headless:
             options.add_argument("--headless=new")
         options.add_argument(f"--window-size={width},{height}")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
         return webdriver.Chrome(options=options)
     elif browser == "firefox":
         options = FirefoxOptions()
         if headless:
             options.add_argument("--headless")
-        return webdriver.Firefox(options=options)
+        driver = webdriver.Firefox(options=options)
+        driver.set_window_size(width, height)
+        return driver
     else:
         raise ValueError(f"Browser {browser} not supported")
+
 
 @pytest.fixture(scope="function")
 def driver(request):
@@ -52,68 +61,59 @@ def driver(request):
     yield driver
     driver.quit()
 
+
 @pytest.fixture(scope="session")
 def env_config(request):
     env_name = request.config.getoption("--env")
     return get_env_config(env_name)
+
 
 @pytest.fixture(scope="function")
 def user(request, env_config):
     user_type = request.config.getoption("--user-type") or env_config.default_user
     return get_user(user_type)
 
-@pytest.fixture(scope="session")
-def links():
-    """Фикстура с основными ссылками для тестов."""
-    host = "https://stellarburgers.nomoreparties.site/"
-    return {
-        "HOST": host,
-        "USER_PROFILE": f"{host}account/profile",
-        "LOGIN": f"{host}login",
-        "REGISTER": f"{host}register",
-        "FORGOT_PASSWORD": f"{host}forgot-password"
-    }
 
 @pytest.fixture
-def registration_page(driver, links):
-    return RegistrationPage(driver, links)
+def registration_page(driver, env_config):
+    return RegistrationPage(driver, env_config.url)
+
 
 @pytest.fixture
-def sign_in_page(driver, links):
-    return SignIn(driver, links)
+def login_profile_page(driver, env_config):
+    return LoginViaProfilePage(driver, env_config.url)
+
 
 @pytest.fixture
-def sign_in_profile_registration(driver, links):
-    return SignInRegistrationPage(driver, links)
+def login_registration_page(driver, env_config):
+    return LoginViaRegistrationPage(driver, env_config.url)
+
 
 @pytest.fixture
-def sign_in_password_recovery(driver, links):
-    return SignInPasswordRecoveryPage(driver, links)
+def login_recovery_page(driver, env_config):
+    return LoginViaPasswordRecoveryPage(driver, env_config.url)
+
 
 @pytest.fixture
-def log_in_to_your_account(driver, links):
-    return LogInToYourAccountPage(driver, links)
+def login_main_page(driver, env_config):
+    return LoginViaMainPage(driver, env_config.url)
+
 
 @pytest.fixture
-def passage(driver, links):
-    return Passage(driver, links)
+def navigation_page(driver, env_config):
+    return NavigationPage(driver, env_config.url)
+
 
 @pytest.fixture
-def exit_in_profile(driver, links):
-    return ExitInProfile(driver, links)
+def profile_exit_page(driver, env_config):
+    return ProfileExitPage(driver, env_config.url)
+
 
 @pytest.fixture
-def buns_passages(driver, links):
-    return BunsSauceFillingsPassagesPage(driver, links)
+def ingredients_page(driver, env_config):
+    return IngredientsPage(driver, env_config.url)
 
-@pytest.fixture
-def dev_user():
-    env = get_env_config("DEV")
-    return get_user(env.default_user)
 
 @pytest.fixture
 def random_user():
-    """Генерирует случайного пользователя для теста регистрации."""
     return Credentials().generate_user()
-
-
