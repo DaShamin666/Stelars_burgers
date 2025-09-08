@@ -1,5 +1,16 @@
-selenium>=4.0.0
-pytest>=7.0.0
+# Основные зависимости для тестирования
+selenium>=4.15.0
+pytest>=7.4.0
+pytest-xvfb>=3.0.0
+pytest-html>=4.1.0
+
+# Allure отчеты
 allure-pytest>=2.13.5
-Faker>=13.0.0 
-allure-python-commons~=2.14.3
+allure-python-commons>=2.14.3
+
+# Генерация тестовых данных
+Faker>=20.0.0
+
+# Дополнительные утилиты
+webdriver-manager>=4.0.0
+chromedriver-binary>=131.0.0
