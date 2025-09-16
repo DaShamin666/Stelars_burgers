@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # Основной сервис для запуска тестов
+  stelars-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stelars_burgers_tests
+    volumes:
+      # Монтируем директорию с результатами для доступа с хоста
+      - ./allure_results:/app/allure_results
+      - ./pytest_reports:/app/pytest_reports
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+    command: >
+      /app/run_tests.sh pytest 
+      --browser=chrome 
+      --headless 
+      --env=dev 
+      -v 
+      --alluredir=/app/allure_results
+      --html=/app/pytest_reports/report.html 
+      --self-contained-html
+    networks:
+      - test_network
+
+  # Сервис для запуска тестов на STAGE окружении
+  stelars-tests-stage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stelars_burgers_tests_stage
+    volumes:
+      - ./allure_results:/app/allure_results
+      - ./pytest_reports:/app/pytest_reports
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+    command: >
+      /app/run_tests.sh pytest 
+      --browser=chrome 
+      --headless 
+      --env=stage 
+      -v 
+      --alluredir=/app/allure_results
+      --html=/app/pytest_reports/report_stage.html 
+      --self-contained-html
+    networks:
+      - test_network
+
+  # Сервис для запуска тестов в Firefox
+  stelars-tests-firefox:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stelars_burgers_tests_firefox
+    volumes:
+      - ./allure_results:/app/allure_results
+      - ./pytest_reports:/app/pytest_reports
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+    command: >
+      /app/run_tests.sh pytest 
+      --browser=firefox 
+      --headless 
+      --env=dev 
+      -v 
+      --alluredir=/app/allure_results
+      --html=/app/pytest_reports/report_firefox.html 
+      --self-contained-html
+    networks:
+      - test_network
+
+  # Сервис для запуска только smoke тестов
+  stelars-tests-smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stelars_burgers_smoke_tests
+    volumes:
+      - ./allure_results:/app/allure_results
+      - ./pytest_reports:/app/pytest_reports
+    environment:
+      - PYTHONPATH=/app
+      - DISPLAY=:99
+    command: >
+      /app/run_tests.sh pytest 
+      -m smoke 
+      --browser=chrome 
+      --headless 
+      --env=dev 
+      -v 
+      --alluredir=/app/allure_results
+      --html=/app/pytest_reports/report_smoke.html 
+      --self-contained-html
+    networks:
+      - test_network
+
+  # Сервис для генерации Allure отчетов
+  allure-server:
+    image: frankescobar/allure-docker-service
+    container_name: stelars_allure_server
+    ports:
+      - "5050:5050"
+    volumes:
+      - ./allure_results:/app/allure-results:ro
+    environment:
+      - CHECK_RESULTS_EVERY_SECONDS=1
+      - KEEP_HISTORY=20
+    networks:
+      - test_network
+
+networks:
+  test_network:
+    driver: bridge

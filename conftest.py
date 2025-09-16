@@ -39,14 +39,96 @@ def create_driver(browser, headless, width, height):
         options.add_argument(f"--window-size={width},{height}")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        return webdriver.Chrome(options=options)
+        options.add_argument("--disable-gpu")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--remote-debugging-port=9222")
+        
+        # Для Docker/Linux используем Chromium напрямую
+        import os
+        import platform
+        
+        # Проверяем архитектуру и систему
+        if platform.system() == "Linux" and platform.machine() == "aarch64":
+            # На ARM64 Linux используем Chromium
+            options.binary_location = "/usr/bin/chromium"
+        elif os.path.exists("/usr/bin/chromium"):
+            # Если Chromium доступен, используем его
+            options.binary_location = "/usr/bin/chromium"
+        
+        # Создаем Service для ChromeDriver
+        from selenium.webdriver.chrome.service import Service
+        
+        try:
+            # Определяем пути к возможным драйверам
+            driver_paths = [
+                "/usr/bin/chromedriver",
+                "/usr/bin/chromium-driver", 
+                "/usr/local/bin/chromedriver"
+            ]
+            
+            # Ищем доступный драйвер
+            driver_path = None
+            for path in driver_paths:
+                if os.path.exists(path) and os.access(path, os.X_OK):
+                    driver_path = path
+                    break
+            
+            if driver_path:
+                # Если драйвер найден, используем его
+                service = Service(driver_path)
+                return webdriver.Chrome(service=service, options=options)
+            else:
+                # Fallback - пытаемся без явного указания пути
+                return webdriver.Chrome(options=options)
+                
+        except Exception as e:
+            # Пытаемся использовать webdriver-manager как последнюю попытку
+            try:
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
+                return webdriver.Chrome(service=service, options=options)
+            except Exception as inner_e:
+                raise Exception(f"Не удалось создать Chrome/Chromium driver. Основная ошибка: {e}, webdriver-manager ошибка: {inner_e}")
     elif browser == "firefox":
         options = FirefoxOptions()
         if headless:
             options.add_argument("--headless")
-        driver = webdriver.Firefox(options=options)
-        driver.set_window_size(width, height)
-        return driver
+        
+        # Добавляем настройки для Docker-контейнера
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        
+        # Создаем Service для GeckoDriver
+        from selenium.webdriver.firefox.service import Service
+        import os
+        
+        try:
+            # Определяем пути к возможным драйверам
+            driver_paths = [
+                "/usr/local/bin/geckodriver",
+                "/usr/bin/geckodriver"
+            ]
+            
+            # Ищем доступный драйвер
+            driver_path = None
+            for path in driver_paths:
+                if os.path.exists(path) and os.access(path, os.X_OK):
+                    driver_path = path
+                    break
+            
+            if driver_path:
+                # Если драйвер найден, используем его
+                service = Service(driver_path)
+                driver = webdriver.Firefox(service=service, options=options)
+            else:
+                # Fallback - пытаемся без явного указания пути
+                driver = webdriver.Firefox(options=options)
+                
+            driver.set_window_size(width, height)
+            return driver
+            
+        except Exception as e:
+            raise Exception(f"Не удалось создать Firefox driver: {e}")
     else:
         raise ValueError(f"Browser {browser} not supported")
 
